@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiverse Portal</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/4.6.0/web3.min.js"></script>
+    <style>
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: linear-gradient(45deg, #0f172a, #1e293b);
+            min-height: 100vh;
+            margin: 0;
+            color: #e2e8f0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .portal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .portal-card {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid #38bdf8;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .portal-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.4);
+        }
+
+        .connect-button {
+            background: linear-gradient(45deg, #38bdf8, #818cf8);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .connect-button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .wallet-status {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.3);
+            border-radius: 8px;
+        }
+
+        .particle {
+            position: fixed;
+            background: white;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ Multiverse Portal</h1>
+        
+        <div class="portal-grid">
+            <div class="portal-card">
+                <h2>🌌 Ethereum Portal</h2>
+                <button class="connect-button" id="connectEth">Connect ETH Wallet</button>
+                <div class="wallet-status" id="ethStatus">Not connected</div>
+            </div>
+
+            <div class="portal-card">
+                <h2>🚀 Solana Portal</h2>
+                <button class="connect-button" id="connectSol">Connect Solana Wallet</button>
+                <div class="wallet-status" id="solStatus">Not connected</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Create particle effect
+        function createParticles() {
+            const colors = ['#38bdf8', '#818cf8', '#c084fc'];
+            
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.width = Math.random() * 4 + 'px';
+                particle.style.height = particle.style.width;
+                particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                particle.style.left = Math.random() * 100 + 'vw';
+                particle.style.top = Math.random() * 100 + 'vh';
+                document.body.appendChild(particle);
+
+                // Animate particle
+                setInterval(() => {
+                    particle.style.top = Math.random() * 100 + 'vh';
+                    particle.style.left = Math.random() * 100 + 'vw';
+                    particle.style.transition = 'all ' + (Math.random() * 5 + 5) + 's linear';
+                }, Math.random() * 5000 + 5000);
+            }
+        }
+
+        // Handle Ethereum connection
+        document.getElementById('connectEth').addEventListener('click', async () => {
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    document.getElementById('ethStatus').innerHTML = 
+                        `Connected: ${accounts[0].slice(0,6)}...${accounts[0].slice(-4)}
+                         <p>Portal Status: Active ⚡</p>`;
+                } catch (error) {
+                    document.getElementById('ethStatus').textContent = 'Connection failed: ' + error.message;
+                }
+            } else {
+                document.getElementById('ethStatus').textContent = 'Please install MetaMask';
+            }
+        });
+
+        // Handle Solana connection
+        document.getElementById('connectSol').addEventListener('click', async () => {
+            if (typeof window.solana !== 'undefined') {
+                try {
+                    const resp = await window.solana.connect();
+                    document.getElementById('solStatus').innerHTML = 
+                        `Connected: ${resp.publicKey.toString().slice(0,6)}...
+                         <p>Portal Status: Active 🚀</p>`;
+                } catch (error) {
+                    document.getElementById('solStatus').textContent = 'Connection failed: ' + error.message;
+                }
+            } else {
+                document.getElementById('solStatus').textContent = 'Please install Phantom Wallet';
+            }
+        });
+
+        // Initialize particles
+        createParticles();
+    </script>
+</body>
+</html>
