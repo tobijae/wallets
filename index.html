@@ -4,18 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Multiverse Explorer's Collection</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/umd/lucide.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #111827;
+            background: #0f172a;
             color: white;
+            margin: 0;
             min-height: 100vh;
         }
 
@@ -25,195 +20,236 @@
             padding: 2rem;
         }
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-
-        .search-container {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .search-box {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: #1f2937;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-        }
-
-        input {
-            flex: 1;
-            background: transparent;
-            border: none;
+        .search-bar {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            width: 100%;
             color: white;
-            font-size: 1rem;
-            outline: none;
-        }
-
-        button {
-            background: #2563eb;
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        button:hover {
-            background: #1d4ed8;
-        }
-
-        .collection-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .profile-card {
-            background: #1f2937;
-            border-radius: 1rem;
-            padding: 1.5rem;
-            transition: transform 0.3s;
-        }
-
-        .profile-card:hover {
-            transform: scale(1.02);
-        }
-
-        .profile-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
             margin-bottom: 1rem;
         }
 
-        .avatar {
-            width: 48px;
-            height: 48px;
+        .map-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            margin-top: 2rem;
+            height: 600px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
             background: #2563eb;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: bold;
         }
 
-        .posts {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
+        .node {
+            cursor: pointer;
         }
 
-        .post {
-            background: #374151;
-            padding: 1rem;
-            border-radius: 0.5rem;
+        .node:hover {
+            stroke: #3b82f6;
+            stroke-width: 2px;
         }
 
-        .empty-state {
-            text-align: center;
-            padding: 3rem;
-            color: #9ca3af;
+        .link {
+            stroke: rgba(255, 255, 255, 0.2);
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>Multiverse Explorer's Collection</h1>
-            <button id="themeToggle">🌙</button>
-        </div>
-
-        <div class="search-container">
-            <div class="search-box">
-                <i data-lucide="search"></i>
-                <input type="text" id="searchInput" placeholder="Enter Twitter @handle to collect...">
-            </div>
-            <button id="addButton">Add to Collection</button>
-        </div>
-
-        <div class="collection-grid" id="profilesContainer">
-            <!-- Profiles will be added here -->
-        </div>
-
-        <div class="empty-state" id="emptyState">
-            <i data-lucide="collection" style="width: 48px; height: 48px; margin: 0 auto 1rem;"></i>
-            <h2>Your Collection is Empty</h2>
-            <p>Start by adding Twitter profiles to your collection</p>
+        <h1>Multiverse Explorer's Collection</h1>
+        <input type="text" class="search-bar" placeholder="@username" id="searchInput">
+        <button class="btn" id="addButton">Add to Collection</button>
+        
+        <div class="map-container" id="map">
+            <!-- D3 visualization will be rendered here -->
         </div>
     </div>
 
     <script>
-        // Initialize Lucide icons
-        lucide.createIcons();
+        // Sample data structure for the network
+        const networkData = {
+            nodes: [
+                { id: "elonmusk", followers: 160000000, connections: ["sama", "jack"] },
+                { id: "sama", followers: 2000000, connections: ["elonmusk", "naval"] },
+                { id: "naval", followers: 3000000, connections: ["sama", "jack"] },
+                { id: "jack", followers: 6000000, connections: ["elonmusk", "naval"] }
+            ]
+        };
 
-        let profiles = [];
-        const profilesContainer = document.getElementById('profilesContainer');
-        const searchInput = document.getElementById('searchInput');
-        const emptyState = document.getElementById('emptyState');
-
-        document.getElementById('addButton').addEventListener('click', () => {
-            const handle = searchInput.value.trim();
-            if (!handle) return;
-
-            const newProfile = {
-                id: profiles.length + 1,
-                handle: handle,
-                collected: new Date().toLocaleDateString(),
-                posts: [
-                    { id: 1, content: "Latest tweet simulation...", likes: Math.floor(Math.random() * 1000) },
-                    { id: 2, content: "Another tweet simulation...", likes: Math.floor(Math.random() * 1000) }
-                ]
-            };
-
-            profiles.push(newProfile);
-            searchInput.value = '';
-            updateDisplay();
+        // Generate links from node connections
+        const links = [];
+        networkData.nodes.forEach(node => {
+            node.connections.forEach(target => {
+                links.push({
+                    source: node.id,
+                    target: target,
+                    value: 1
+                });
+            });
         });
 
-        function updateDisplay() {
-            if (profiles.length === 0) {
-                emptyState.style.display = 'block';
-                profilesContainer.innerHTML = '';
-                return;
+        // Setup the D3 visualization
+        const width = document.getElementById('map').clientWidth;
+        const height = document.getElementById('map').clientHeight;
+
+        const svg = d3.select("#map")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create the simulation
+        const simulation = d3.forceSimulation(networkData.nodes)
+            .force("link", d3.forceLink(links).id(d => d.id))
+            .force("charge", d3.forceManyBody().strength(-1000))
+            .force("center", d3.forceCenter(width / 2, height / 2));
+
+        // Draw the links
+        const link = svg.append("g")
+            .selectAll("line")
+            .data(links)
+            .join("line")
+            .attr("class", "link");
+
+        // Draw the nodes
+        const node = svg.append("g")
+            .selectAll("circle")
+            .data(networkData.nodes)
+            .join("circle")
+            .attr("class", "node")
+            .attr("r", d => Math.sqrt(d.followers) * 0.01)
+            .attr("fill", "#3b82f6")
+            .call(drag(simulation));
+
+        // Add labels
+        const labels = svg.append("g")
+            .selectAll("text")
+            .data(networkData.nodes)
+            .join("text")
+            .attr("text-anchor", "middle")
+            .attr("fill", "white")
+            .attr("font-size", "12px")
+            .text(d => "@" + d.id);
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            node
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y);
+
+            labels
+                .attr("x", d => d.x)
+                .attr("y", d => d.y + 20);
+        });
+
+        // Implement drag behavior
+        function drag(simulation) {
+            function dragstarted(event) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                event.subject.fx = event.subject.x;
+                event.subject.fy = event.subject.y;
             }
 
-            emptyState.style.display = 'none';
-            profilesContainer.innerHTML = profiles.map(profile => `
-                <div class="profile-card">
-                    <div class="profile-header">
-                        <div class="avatar">${profile.handle[0].toUpperCase()}</div>
-                        <div>
-                            <h3>@${profile.handle}</h3>
-                            <p style="color: #9ca3af;">Collected: ${profile.collected}</p>
-                        </div>
-                        <i data-lucide="bookmark" style="margin-left: auto;"></i>
-                    </div>
-                    <div class="posts">
-                        ${profile.posts.map(post => `
-                            <div class="post">
-                                <p>${post.content}</p>
-                                <p style="color: #9ca3af; margin-top: 0.5rem;">♥ ${post.likes}</p>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `).join('');
-            
-            lucide.createIcons();
+            function dragged(event) {
+                event.subject.fx = event.x;
+                event.subject.fy = event.y;
+            }
+
+            function dragended(event) {
+                if (!event.active) simulation.alphaTarget(0);
+                event.subject.fx = null;
+                event.subject.fy = null;
+            }
+
+            return d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended);
         }
 
-        // Initialize display
-        updateDisplay();
+        // Handle adding new profiles
+        document.getElementById('addButton').addEventListener('click', () => {
+            const username = document.getElementById('searchInput').value.trim();
+            if (!username) return;
+
+            // Add new node
+            const newNode = {
+                id: username,
+                followers: Math.floor(Math.random() * 1000000),
+                connections: [networkData.nodes[Math.floor(Math.random() * networkData.nodes.length)].id]
+            };
+
+            networkData.nodes.push(newNode);
+            
+            // Add new links
+            newNode.connections.forEach(target => {
+                links.push({
+                    source: newNode.id,
+                    target: target,
+                    value: 1
+                });
+            });
+
+            // Update visualization
+            updateVisualization();
+        });
+
+        function updateVisualization() {
+            // Update nodes
+            const node = svg.selectAll(".node")
+                .data(networkData.nodes)
+                .join("circle")
+                .attr("class", "node")
+                .attr("r", d => Math.sqrt(d.followers) * 0.01)
+                .attr("fill", "#3b82f6");
+
+            // Update links
+            const link = svg.selectAll(".link")
+                .data(links)
+                .join("line")
+                .attr("class", "link");
+
+            // Update labels
+            const labels = svg.selectAll("text")
+                .data(networkData.nodes)
+                .join("text")
+                .attr("text-anchor", "middle")
+                .attr("fill", "white")
+                .attr("font-size", "12px")
+                .text(d => "@" + d.id);
+
+            // Update simulation
+            simulation.nodes(networkData.nodes);
+            simulation.force("link").links(links);
+            simulation.alpha(1).restart();
+        }
     </script>
 </body>
 </html>
